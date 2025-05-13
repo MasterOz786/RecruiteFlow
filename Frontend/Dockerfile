@@ -13,7 +13,7 @@ RUN npm run build
 FROM nginx:alpine
 
 # Copy the build output from the build stage to the NGINX container
-COPY --from=build /app/dist /usr/share/nginx/dist
+COPY --from=build /app/dist /usr/share/nginx/html
 
 # Expose the port the app will be accessible on
 EXPOSE 80

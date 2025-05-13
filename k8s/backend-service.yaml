@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: scd-backend
+  namespace: scd-project
+spec:
+  ports:
+  - port: 5000
+    targetPort: 5000
+  selector:
+    app: scd-backend
+  type: ClusterIP

@@ -1,0 +1,69 @@
+name: Build and Deploy to Minikube
+on:
+  push:
+    branches:
+      - main
+jobs:
+  build-deploy:
+    runs-on: self-hosted
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+    - name: Verify environment
+      run: |
+        echo "Docker version:"
+        docker --version
+        echo "Minikube status:"
+        minikube status
+        echo "kubectl version:"
+        kubectl version --client
+    - name: Set up Docker to use Minikube's environment
+      run: |
+        echo "Configuring Docker to use Minikube's daemon..."
+        eval $(minikube docker-env)
+        docker info --format '{{.Name}}'
+    - name: Build backend Docker image
+      run: |
+        echo "Building backend image..."
+        docker build -t masteroz/scd-backend:latest ./backend
+        echo "Backend image built successfully"
+    - name: Build frontend Docker image
+      run: |
+        echo "Building frontend image..."
+        docker build -t masteroz/scd-frontend:latest ./frontend
+        echo "Frontend image built successfully"
+    - name: Login to Docker Hub
+      run: |
+        echo "Logging into Docker Hub..."
+        echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
+    - name: Push backend Docker image
+      run: |
+        echo "Pushing backend image..."
+        docker push masteroz/scd-backend:latest
+        echo "Backend image pushed successfully"
+    - name: Push frontend Docker image
+      run: |
+        echo "Pushing frontend image..."
+        docker push masteroz/scd-frontend:latest
+        echo "Frontend image pushed successfully"
+    - name: Deploy to Minikube
+      run: |
+        echo "Applying Kubernetes manifests..."
+        kubectl apply -f k8s/mongodb-deployment.yaml -n scd-project
+        kubectl apply -f k8s/mongodb-service.yaml -n scd-project
+        kubectl apply -f k8s/backend-deployment.yaml -n scd-project
+        kubectl apply -f k8s/backend-service.yaml -n scd-project
+        kubectl apply -f k8s/frontend-deployment.yaml -n scd-project
+        kubectl apply -f k8s/frontend-service.yaml -n scd-project
+        echo "Deployment completed"
+    - name: Verify deployment
+      run: |
+        echo "Checking Kubernetes resources..."
+        echo "Pods:"
+        kubectl get pods -n scd-project -o wide
+        echo "Services:"
+        kubectl get services -n scd-project -o wide
+        echo "Deployments:"
+        kubectl get deployments -n scd-project -o wide
+        echo "Nodes:"
+        kubectl get nodes -o wide
